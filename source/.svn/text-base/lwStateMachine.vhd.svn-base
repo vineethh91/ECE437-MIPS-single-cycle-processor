@@ -1,0 +1,81 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity lwStateMachine is
+    port(
+    clk: in std_logic;
+    rst_n: in std_logic;
+    opcode : in STD_LOGIC_VECTOR(5 downto 0);
+    pcWriteEnable: out std_logic;
+    haltFlag : out std_logic
+  );
+end lwStateMachine;
+
+architecture arch_lwStateMachine of lwStateMachine is
+  type state_type is (IDLE, LW_HOLD, LW_HOLD_2, HALT);
+  signal state, nextState : state_type;
+begin
+
+  pcWriteEnableReg: process(clk, rst_n)
+  begin
+    if(rst_n = '0') then
+      state <= IDLE;
+    elsif(rising_edge(clk)) then
+      state <= nextState;
+    elsif(falling_edge(clk)) then
+      state <= nextState;
+    end if;
+  end process;
+    
+  FSM: process(state, opcode)
+  begin
+    nextState <= state;
+    pcWriteEnable <= '1';
+    haltFlag <= '0';
+    case state is
+      when IDLE => 
+        if(opcode="111111") then
+          nextState <= HALT;
+        elsif(opcode="100011") then
+          nextState <= LW_HOLD;
+        end if;
+      
+      when LW_HOLD =>
+        nextState <= LW_HOLD_2;
+        haltFlag <= '0';
+        pcWriteEnable <= '0';
+      
+      when LW_HOLD_2 =>
+        nextState <= IDLE;
+        haltFlag <= '0';
+        pcWriteEnable <= '0';
+      
+      when HALT =>
+        nextState <= HALT;
+        haltFlag <= '1';
+        pcWriteEnable <= '0';
+          
+      when OTHERS =>
+        nextState <= IDLE;
+    end case;
+  end process;
+ 
+--  outputLogic: process(state)
+--  begin
+--    pcWriteEnable <= '1';
+--    haltFlag <= '0';
+--    case state is
+--      when IDLE => 
+--        pcWriteEnable <= '1';
+--        haltFlag <= '0';
+--      when LW_HOLD =>
+--        pcWriteEnable <= '0';
+--        haltFlag <= '0';        
+--      when HALT =>
+--        pcWriteEnable <= '0';
+--        haltFlag <= '1';
+--    end case;
+--  end process;
+      
+end architecture;
